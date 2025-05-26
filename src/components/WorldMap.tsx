@@ -1,12 +1,7 @@
 'use client';
-import 'leaflet/dist/leaflet.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import type { LatLngExpression } from 'leaflet';
-import L from 'leaflet';
 import { fetchStationsByTag } from '../utils/fetchStations';
-
-const center: LatLngExpression = [20, 0];
 
 // Add a type interface for WorldMapProps
 interface WorldMapProps {
@@ -20,40 +15,11 @@ interface Station {
   url_resolved?: string;
 }
 
-// Custom green marker icon
-const createGreenMarkerIcon = () => {
-  return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="
-      background-color: #00ff00;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 2px solid #ffffff;
-      box-shadow: 0 0 15px #00ff00;
-      animation: pulse 2s infinite;
-    "></div>
-    <style>
-      @keyframes pulse {
-        0% {
-          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
-        }
-        70% {
-          box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
-        }
-      }
-    </style>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
-  });
-};
+// Dynamically load Globe on client only
+const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
 
 export default function WorldMap({ tag }: WorldMapProps) {
   const [stations, setStations] = useState<Station[]>([]);
-  const [MapComponents, setMapComponents] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -63,6 +29,11 @@ export default function WorldMap({ tag }: WorldMapProps) {
     validStationsCount: 0,
     lastUpdate: new Date().toISOString(),
     rawStations: [] as any[]
+  });
+  const globeRef = useRef<any>(null);
+  const [dimensions, setDimensions] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 0,
+    height: typeof window !== 'undefined' ? window.innerHeight : 0
   });
 
   useEffect(() => {
@@ -124,40 +95,34 @@ export default function WorldMap({ tag }: WorldMapProps) {
   }, [tag]);
 
   useEffect(() => {
-    // Dynamically import react-leaflet components on the client
-    import('react-leaflet').then((module) => {
-      console.log('Map components loaded successfully');
-      setMapComponents(module);
-      setDebugInfo(prev => ({
-        ...prev,
-        mapLoaded: true,
-        lastUpdate: new Date().toISOString()
-      }));
-    }).catch(error => {
-      console.error('Error loading map components:', error);
-      setError('Failed to load map components');
-    });
+    if (globeRef.current) {
+      globeRef.current.controls().autoRotate = true;
+      globeRef.current.controls().autoRotateSpeed = 0.3;
+    }
+  }, []);
 
-    // Initialize Leaflet marker icon on the client side
-    import('leaflet').then((L) => {
-      console.log('Leaflet loaded successfully');
-      // Set default icon for any markers that might use it
-      const defaultIcon = L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
       });
-      L.Marker.prototype.options.icon = defaultIcon;
-    });
+    };
+
+    // Add resize listener
+    window.addEventListener('resize', handleResize);
+    
+    // Initial size
+    handleResize();
+
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   return (
     <div className="relative w-screen h-screen">
-      {/* Hamburger Menu Button */}
+      {/* Debug UI */}
       <button 
         onClick={() => setShowDebug(!showDebug)}
         className="absolute top-4 right-4 z-50 bg-gray-900/80 p-2 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
@@ -200,64 +165,26 @@ export default function WorldMap({ tag }: WorldMapProps) {
         </div>
       )}
 
-      {/* Map */}
-      {!error && (
+      {/* 3D Globe */}
+      {!error && stations.length > 0 && (
         <div className="w-full h-full">
-          {!MapComponents ? (
-            <div className="flex items-center justify-center h-full text-green-400">Loading map...</div>
-          ) : (
-            (() => {
-              const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
-              
-              // Filter out stations with invalid coordinates
-              const validStations = stations.filter(
-                station => 
-                  typeof station.latitude === 'number' && 
-                  typeof station.longitude === 'number' &&
-                  !isNaN(station.latitude) && 
-                  !isNaN(station.longitude) &&
-                  station.latitude !== 0 && 
-                  station.longitude !== 0
-              );
-
-              return (
-                <MapContainer
-                  center={center}
-                  zoom={2}
-                  className="w-full h-full"
-                >
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                  />
-                  {validStations.map((s, i) => (
-                    <Marker 
-                      key={i} 
-                      position={[s.latitude, s.longitude]}
-                      icon={createGreenMarkerIcon()}
-                      eventHandlers={{
-                        click: () => {
-                          console.log('Marker clicked:', s);
-                        }
-                      }}
-                    >
-                      <Popup className="dark-popup">
-                        <div className="p-3 bg-gray-900 text-white rounded-lg">
-                          <strong className="text-lg text-green-400">{s.name}</strong>
-                          <div className="text-sm text-gray-400 mt-1">
-                            Lat: {s.latitude}, Lng: {s.longitude}
-                          </div>
-                          {s.url_resolved && (
-                            <audio controls src={s.url_resolved} className="w-full mt-2 bg-gray-800 rounded" />
-                          )}
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
-              );
-            })()
-          )}
+          <Globe
+            ref={globeRef}
+            width={dimensions.width}
+            height={dimensions.height}
+            globeImageUrl="//unpkg.com/three-globe/example/img/earth-dark.jpg"
+            backgroundColor="rgba(0,0,0,0)"
+            pointsData={stations}
+            pointLat="latitude"
+            pointLng="longitude"
+            pointColor={() => '#00ff00'}
+            pointRadius={0.5}
+            onPointClick={p => console.log('Globe point clicked:', p)}
+            enablePointerInteraction={true}
+            animateIn={true}
+            pointAltitude={0.1}
+            pointRadius={dimensions.width < 768 ? 0.3 : 0.5}
+          />
         </div>
       )}
     </div>
