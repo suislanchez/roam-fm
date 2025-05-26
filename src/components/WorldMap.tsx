@@ -3,6 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLngExpression } from 'leaflet';
+import L from 'leaflet';
 import { fetchStationsByTag } from '../utils/fetchStations';
 
 const center: LatLngExpression = [20, 0];
@@ -21,19 +22,33 @@ interface Station {
 
 // Custom green marker icon
 const createGreenMarkerIcon = () => {
-  return {
+  return L.divIcon({
     className: 'custom-marker',
     html: `<div style="
       background-color: #00ff00;
-      width: 20px;
-      height: 20px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      border: 3px solid #ffffff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-    "></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
-  };
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 15px #00ff00;
+      animation: pulse 2s infinite;
+    "></div>
+    <style>
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(0, 255, 0, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(0, 255, 0, 0);
+        }
+      }
+    </style>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
 };
 
 export default function WorldMap({ tag }: WorldMapProps) {
@@ -41,6 +56,7 @@ export default function WorldMap({ tag }: WorldMapProps) {
   const [MapComponents, setMapComponents] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState({
     mapLoaded: false,
     stationsCount: 0,
@@ -140,63 +156,55 @@ export default function WorldMap({ tag }: WorldMapProps) {
   }, []);
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="relative w-screen h-screen">
+      {/* Hamburger Menu Button */}
+      <button 
+        onClick={() => setShowDebug(!showDebug)}
+        className="absolute top-4 right-4 z-50 bg-gray-900/80 p-2 rounded-lg border border-gray-700 hover:bg-gray-800 transition-colors"
+      >
+        <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
       {/* Debug Panel */}
-      <div className="absolute top-4 right-4 bg-black/80 text-white p-4 rounded-lg z-50 text-sm font-mono">
-        <h3 className="font-bold mb-2">Debug Info</h3>
-        <div>Map Loaded: {debugInfo.mapLoaded ? '✅' : '❌'}</div>
-        <div>Total Stations: {debugInfo.stationsCount}</div>
-        <div>Valid Stations: {debugInfo.validStationsCount}</div>
-        <div>Last Update: {debugInfo.lastUpdate}</div>
-        <div>Current Tag: {tag}</div>
-        <div>Loading: {isLoading ? '✅' : '❌'}</div>
-        {error && <div className="text-red-400">Error: {error}</div>}
-        <div className="mt-2 text-xs">
-          <div>Sample Station Data:</div>
-          <pre className="whitespace-pre-wrap">
-            {JSON.stringify(debugInfo.rawStations, null, 2)}
-          </pre>
+      {showDebug && (
+        <div className="absolute top-16 right-4 bg-gray-900/90 text-gray-300 p-4 rounded-lg z-50 text-xs font-mono border border-gray-700 max-w-xs overflow-auto max-h-[80vh]">
+          <h3 className="font-bold mb-2 text-green-400">Debug Info</h3>
+          <div>Map Loaded: {debugInfo.mapLoaded ? '✅' : '❌'}</div>
+          <div>Total Stations: {debugInfo.stationsCount}</div>
+          <div>Valid Stations: {debugInfo.validStationsCount}</div>
+          <div>Last Update: {debugInfo.lastUpdate}</div>
+          <div>Current Tag: {tag}</div>
+          <div>Loading: {isLoading ? '✅' : '❌'}</div>
+          {error && <div className="text-red-400">Error: {error}</div>}
+          <div className="mt-2">
+            <div>Sample Station Data:</div>
+            <pre className="whitespace-pre-wrap text-gray-400 text-[10px]">
+              {JSON.stringify(debugInfo.rawStations, null, 2)}
+            </pre>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Loading and Error States */}
       {isLoading && (
-        <div className="bg-blue-100 p-4 text-center">
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-gray-900/80 text-green-400 px-4 py-2 rounded-lg z-50">
           Loading stations for {tag}...
         </div>
       )}
       
       {error && (
-        <div className="bg-red-100 p-4 text-center text-red-700">
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-900/80 text-red-400 px-4 py-2 rounded-lg z-50">
           {error}
-        </div>
-      )}
-
-      {/* Station List */}
-      {!isLoading && !error && stations.length > 0 && (
-        <div className="bg-gray-50 p-4 border-b">
-          <h2 className="text-lg font-semibold mb-2">Found {stations.length} stations:</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {stations.map((station, index) => (
-              <div key={index} className="p-2 bg-white rounded shadow">
-                <div className="font-medium">{station.name}</div>
-                <div className="text-xs text-gray-500">
-                  Lat: {station.latitude}, Lng: {station.longitude}
-                </div>
-                {station.url_resolved && (
-                  <audio controls src={station.url_resolved} className="w-full mt-1" />
-                )}
-              </div>
-            ))}
-          </div>
         </div>
       )}
 
       {/* Map */}
       {!error && (
-        <div style={{ height: 'calc(100vh - 200px)', width: '100%' }}>
+        <div className="w-full h-full">
           {!MapComponents ? (
-            <div className="text-center p-4">Loading map...</div>
+            <div className="flex items-center justify-center h-full text-green-400">Loading map...</div>
           ) : (
             (() => {
               const { MapContainer, TileLayer, Marker, Popup } = MapComponents;
@@ -212,44 +220,40 @@ export default function WorldMap({ tag }: WorldMapProps) {
                   station.longitude !== 0
               );
 
-              console.log('Rendering map with stations:', validStations);
-
               return (
                 <MapContainer
                   center={center}
                   zoom={2}
-                  style={{ height: '100%', width: '100%' }}
+                  className="w-full h-full"
                 >
                   <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution="&copy; OpenStreetMap contributors"
+                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                   />
-                  {validStations.map((s, i) => {
-                    console.log('Creating marker for station:', s);
-                    return (
-                      <Marker 
-                        key={i} 
-                        position={[s.latitude, s.longitude]}
-                        eventHandlers={{
-                          click: () => {
-                            console.log('Marker clicked:', s);
-                          }
-                        }}
-                      >
-                        <Popup>
-                          <div className="p-2">
-                            <strong className="text-lg">{s.name}</strong>
-                            <div className="text-sm text-gray-600 mt-1">
-                              Lat: {s.latitude}, Lng: {s.longitude}
-                            </div>
-                            {s.url_resolved && (
-                              <audio controls src={s.url_resolved} className="w-full mt-2" />
-                            )}
+                  {validStations.map((s, i) => (
+                    <Marker 
+                      key={i} 
+                      position={[s.latitude, s.longitude]}
+                      icon={createGreenMarkerIcon()}
+                      eventHandlers={{
+                        click: () => {
+                          console.log('Marker clicked:', s);
+                        }
+                      }}
+                    >
+                      <Popup className="dark-popup">
+                        <div className="p-3 bg-gray-900 text-white rounded-lg">
+                          <strong className="text-lg text-green-400">{s.name}</strong>
+                          <div className="text-sm text-gray-400 mt-1">
+                            Lat: {s.latitude}, Lng: {s.longitude}
                           </div>
-                        </Popup>
-                      </Marker>
-                    );
-                  })}
+                          {s.url_resolved && (
+                            <audio controls src={s.url_resolved} className="w-full mt-2 bg-gray-800 rounded" />
+                          )}
+                        </div>
+                      </Popup>
+                    </Marker>
+                  ))}
                 </MapContainer>
               );
             })()
