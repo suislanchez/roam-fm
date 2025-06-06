@@ -19,14 +19,38 @@ interface Station {
   mood?: string;
 }
 
+interface RingData {
+  lat: number;
+  lng: number;
+  maxR: number;
+  propagationSpeed: number;
+  repeatPeriod: number;
+  color: () => string;
+  altitude: number;
+}
+
 // Replace countries with moods
 const moods = [
-  { value: 'relaxed', label: 'Relaxed' },
-  { value: 'energetic', label: 'Energetic' },
-  { value: 'focused', label: 'Focused' },
-  { value: 'chill', label: 'Chill' },
-  { value: 'party', label: 'Party' }
-]
+  { value: 'relaxed', label: 'Relaxed', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
+  { value: 'energetic', label: 'Energetic', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { value: 'focused', label: 'Focused', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { value: 'chill', label: 'Chill', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
+  { value: 'party', label: 'Party', icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z' },
+  { value: 'romantic', label: 'Romantic', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
+  { value: 'nostalgic', label: 'Nostalgic', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' }
+];
+
+// Add more genres
+const genres = [
+  { value: 'jazz', label: 'Jazz', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
+  { value: 'rock', label: 'Rock', icon: 'M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z' },
+  { value: 'classical', label: 'Classical', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
+  { value: 'electronic', label: 'Electronic', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { value: 'lofi', label: 'Lofi', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
+  { value: 'blues', label: 'Blues', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
+  { value: 'hiphop', label: 'Hip Hop', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' },
+  { value: 'ambient', label: 'Ambient', icon: 'M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3' }
+];
 
 // Dynamically load Globe on client only
 const Globe = dynamic(() => import('react-globe.gl'), { ssr: false });
@@ -60,15 +84,9 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
   const [focusedStation, setFocusedStation] = useState<Station | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const [showFilters, setShowFilters] = useState(true);
-  const [ringsData, setRingsData] = useState<any[]>([]);
-
-  const genres = [
-    { value: 'jazz', label: 'Jazz' },
-    { value: 'rock', label: 'Rock' },
-    { value: 'classical', label: 'Classical' },
-    { value: 'electronic', label: 'Electronic' },
-    { value: 'lofi', label: 'Lofi' }
-  ];
+  const [ringsData, setRingsData] = useState<RingData[]>([]);
+  const [favorites, setFavorites] = useState<Station[]>([]);
+  const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -230,29 +248,36 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
   }, []);
 
   // Add function to create ring data for a station
-  const createRingData = (station: Station) => {
-    return {
-      lat: station.latitude,
-      lng: station.longitude,
-      maxR: 5, // Maximum radius
-      propagationSpeed: 2, // Speed of the ripple effect
-      repeatPeriod: 1300, // Time between ripples in ms
-      color: () => '#4ECDC4',
-      altitude: 0.1 // Match the point altitude
-    };
-  };
+  const createRingData = (station: Station): RingData => ({
+    lat: station.latitude,
+    lng: station.longitude,
+    maxR: 5,
+    propagationSpeed: 2,
+    repeatPeriod: 1300,
+    color: () => '#4ECDC4',
+    altitude: 0.1
+  });
 
   // Update rings when selected station changes
   useEffect(() => {
     if (selectedStation) {
-      console.log('Creating ring for station:', selectedStation);
       const ring = createRingData(selectedStation);
-      console.log('Ring data:', ring);
       setRingsData([ring]);
     } else {
       setRingsData([]);
     }
   }, [selectedStation]);
+
+  // Add function to toggle favorite
+  const toggleFavorite = (station: Station): void => {
+    setFavorites(prev => {
+      const isFavorite = prev.some(fav => fav.name === station.name);
+      if (isFavorite) {
+        return prev.filter(fav => fav.name !== station.name);
+      }
+      return [...prev, station];
+    });
+  };
 
   return (
     <div className="relative w-screen h-screen">
