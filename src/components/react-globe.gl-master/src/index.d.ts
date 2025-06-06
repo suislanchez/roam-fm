@@ -128,10 +128,10 @@ export interface GlobeProps extends ConfigOptions {
 
   // Paths layer
   pathsData?: object[];
-  pathPoints?: ObjAccessor<any[]>;
-  pathPointLat?: Accessor<any, number>;
-  pathPointLng?: Accessor<any, number>;
-  pathPointAlt?: Accessor<any, number>;
+  pathPoints?: ObjAccessor<GeoCoords[]>;
+  pathPointLat?: Accessor<GeoCoords, number>;
+  pathPointLng?: Accessor<GeoCoords, number>;
+  pathPointAlt?: Accessor<GeoCoords, number>;
   pathResolution?: number;
   pathColor?: ObjAccessor<string | string[] | ((t: number) => string)>;
   pathStroke?: ObjAccessor<number | null>;
@@ -147,10 +147,10 @@ export interface GlobeProps extends ConfigOptions {
 
   // Heatmaps layer
   heatmapsData?: object[];
-  heatmapPoints?: ObjAccessor<any[]>;
-  heatmapPointLat?: Accessor<any, number>;
-  heatmapPointLng?: Accessor<any, number>;
-  heatmapPointWeight?: Accessor<any, number>;
+  heatmapPoints?: ObjAccessor<GeoCoords[]>;
+  heatmapPointLat?: Accessor<GeoCoords, number>;
+  heatmapPointLng?: Accessor<GeoCoords, number>;
+  heatmapPointWeight?: Accessor<GeoCoords, number>;
   heatmapBandwidth?: ObjAccessor<number>;
   heatmapColorFn?: ObjAccessor<(t: number) => string>;
   heatmapColorSaturation?: ObjAccessor<number>;
@@ -317,7 +317,7 @@ export interface GlobeMethods {
   toGlobeCoords(x: number, y: number): { lat: number, lng: number} | null;
 }
 
-type FCwithRef<P = {}, R = {}> = React.FunctionComponent<P & { ref?: React.MutableRefObject<R | undefined> }>;
+type FCwithRef<P = object, R = object> = React.FunctionComponent<P & { ref?: React.MutableRefObject<R | undefined> }>;
 
 declare const Globe: FCwithRef<GlobeProps, GlobeMethods>;
 
