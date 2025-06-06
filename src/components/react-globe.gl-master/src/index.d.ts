@@ -11,24 +11,29 @@ type HexBinAccessor<T> = Accessor<HexBin, T>;
 type TooltipContent = string | React.ReactHTMLElement<HTMLElement>;
 
 interface HexBin {
-  points: object[],
-  sumWeight: number,
-  center: { lat: number, lng: number }
+  hex: string;
+  points: GlobeData[];
+  value: number;
 }
 
 interface GeoJsonGeometry {
   type: string;
-  coordinates: number[];
+  coordinates: number[][];
 }
 
-interface TypeFace {}
+interface TypeFace {
+  family: string;
+  size: number;
+  weight?: string;
+  style?: string;
+}
 
 type LabelOrientation = 'right' | 'top' | 'bottom';
 
 interface GeoCoords {
   lat: number;
   lng: number;
-  altitude: number;
+  altitude?: number;
 }
 
 interface CartesianCoords {
@@ -40,6 +45,10 @@ interface CartesianCoords {
 interface ScreenCoords {
   x: number;
   y: number;
+}
+
+interface GlobeData {
+  [key: string]: unknown;
 }
 
 export interface GlobeProps extends ConfigOptions {
