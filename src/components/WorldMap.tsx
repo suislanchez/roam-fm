@@ -32,16 +32,6 @@ interface RingData {
   altitude: number;
 }
 
-interface GlobePoint {
-  name: string;
-  latitude: number;
-  longitude: number;
-  url_resolved?: string;
-  favicon?: string;
-  country?: string;
-  mood?: string;
-}
-
 // Replace countries with moods
 const moods = [
   { value: 'relaxed', label: 'Relaxed', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
@@ -568,10 +558,10 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
             ringPropagationSpeed="propagationSpeed"
             ringRepeatPeriod="repeatPeriod"
             ringAltitude="altitude"
-            onPointClick={(point: object, event: MouseEvent, coords: { lat: number; lng: number; altitude: number; }) => {
+            onPointClick={(point: object) => {
               handleStationClick(point as Station);
             }}
-            onPointHover={(point: object | null, prevPoint: object | null) => {
+            onPointHover={(point: object | null) => {
               setHoveredStation(point as Station | null);
             }}
             enablePointerInteraction={true}
