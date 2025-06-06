@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { fetchStationsByTag } from '../utils/fetchStations';
+import Image from 'next/image';
+import type { GlobeMethods } from 'react-globe.gl';
+import type { MutableRefObject } from 'react';
 
 // Add a type interface for WorldMapProps
 interface WorldMapProps {
@@ -76,7 +79,7 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
     lastUpdate: new Date().toISOString(),
     rawStations: [] as any[]
   });
-  const globeRef = useRef<any>(null);
+  const globeRef: MutableRefObject<GlobeMethods | undefined> = useRef<GlobeMethods | undefined>(undefined);
   const [dimensions, setDimensions] = useState({
     width: typeof window !== 'undefined' ? window.innerWidth : 0,
     height: typeof window !== 'undefined' ? window.innerHeight : 0
@@ -87,6 +90,7 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
   const [ringsData, setRingsData] = useState<RingData[]>([]);
   const [favorites, setFavorites] = useState<Station[]>([]);
   const [showAbout, setShowAbout] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -193,7 +197,7 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
         lat: latitude,
         lng: longitude,
         altitude: 2
-      }, 1000); // 1 second animation
+      }, 1000);
     }
   };
 
@@ -268,14 +272,14 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
     }
   }, [selectedStation]);
 
-  // Add function to toggle favorite
-  const toggleFavorite = (station: Station): void => {
+  const toggleFavorite = (station: Station) => {
     setFavorites(prev => {
       const isFavorite = prev.some(fav => fav.name === station.name);
       if (isFavorite) {
         return prev.filter(fav => fav.name !== station.name);
+      } else {
+        return [...prev, station];
       }
-      return [...prev, station];
     });
   };
 
@@ -344,10 +348,12 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
                           >
                             <div className="flex items-center space-x-2">
                               {station.favicon ? (
-                                <img 
+                                <Image 
                                   src={station.favicon} 
                                   alt={station.name}
-                                  className="w-4 h-4 rounded"
+                                  width={16}
+                                  height={16}
+                                  className="rounded"
                                 />
                               ) : (
                                 <div className="w-4 h-4 bg-white/10 rounded" />
@@ -455,10 +461,12 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
         >
           <div className="flex items-center space-x-3">
             {hoveredStation.favicon ? (
-              <img 
+              <Image 
                 src={hoveredStation.favicon} 
                 alt={hoveredStation.name}
-                className="w-8 h-8 rounded"
+                width={32}
+                height={32}
+                className="rounded"
               />
             ) : (
               <div className="w-8 h-8 bg-white/10 rounded flex items-center justify-center">
@@ -550,16 +558,11 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
             ringPropagationSpeed="propagationSpeed"
             ringRepeatPeriod="repeatPeriod"
             ringAltitude="altitude"
-            onPointClick={(point: any) => {
-              console.log('Point clicked:', point);
+            onPointClick={(point: object) => {
               handleStationClick(point as Station);
             }}
-            onPointHover={(point: any, prevPoint: any) => {
-              if (point) {
-                setHoveredStation(point as Station);
-              } else {
-                setHoveredStation(null);
-              }
+            onPointHover={(point: object | null) => {
+              setHoveredStation(point as Station | null);
             }}
             enablePointerInteraction={true}
             animateIn={true}
@@ -583,10 +586,12 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
                   {selectedStation.favicon ? (
-                    <img 
+                    <Image 
                       src={selectedStation.favicon} 
                       alt={selectedStation.name}
-                      className="w-12 h-12 rounded-lg object-cover"
+                      width={48}
+                      height={48}
+                      className="rounded-lg object-cover"
                     />
                   ) : (
                     <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
@@ -610,6 +615,28 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
                   >
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => selectedStation && toggleFavorite(selectedStation)}
+                    className={`p-2 rounded-full transition-all duration-300 hover:scale-110 ${
+                      favorites.some(fav => fav.name === selectedStation?.name)
+                        ? 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600'
+                        : 'bg-white/10 hover:bg-white/20'
+                    }`}
+                    title={favorites.some(fav => fav.name === selectedStation?.name) ? "Remove from Favorites" : "Add to Favorites"}
+                  >
+                    <svg 
+                      className={`w-6 h-6 transform transition-transform duration-300 ${
+                        favorites.some(fav => fav.name === selectedStation?.name)
+                          ? 'text-white scale-110'
+                          : 'text-white/60 group-hover:text-white'
+                      }`}
+                      fill={favorites.some(fav => fav.name === selectedStation?.name) ? "currentColor" : "none"}
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                     </svg>
                   </button>
                   <button
@@ -690,6 +717,120 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
             </div>
           </div>
           <audio ref={audioRef} className="hidden" />
+        </div>
+      )}
+
+      {/* Top Left Controls */}
+      <div className="fixed top-4 left-4 z-50 flex flex-col space-y-3">
+        {/* Info Button */}
+        <button
+          onClick={() => setShowAbout(!showAbout)}
+          className="w-12 h-12 bg-black/80 backdrop-blur-sm rounded-full border border-white/20 shadow-lg hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        >
+          <svg 
+            className="w-6 h-6 text-white transform transition-transform duration-300 group-hover:rotate-180" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+
+        {/* Favorites Button */}
+        <button
+          onClick={() => setShowFavorites(!showFavorites)}
+          className="w-12 h-12 bg-black/80 backdrop-blur-sm rounded-full border border-white/20 shadow-lg hover:scale-110 transition-all duration-300 flex items-center justify-center group"
+        >
+          <svg 
+            className="w-6 h-6 text-white transform transition-transform duration-300 group-hover:scale-110" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* About Modal */}
+      {showAbout && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-black/90 border border-white/20 rounded-xl p-6 max-w-lg w-full">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-semibold text-white">About Roam FM</h2>
+              <button
+                onClick={() => setShowAbout(false)}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4 text-white/80">
+              <p>Roam FM is an interactive radio station explorer that lets you discover radio stations from around the world.</p>
+              <p>Features:</p>
+              <ul className="list-disc list-inside space-y-2">
+                <li>Explore radio stations on a 3D globe</li>
+                <li>Filter by genres and moods</li>
+                <li>Save your favorite stations</li>
+                <li>Real-time streaming</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Favorites List */}
+      {showFavorites && (
+        <div className="fixed top-20 left-4 z-50 bg-black/90 backdrop-blur-sm border border-white/20 rounded-xl p-4 w-80 max-h-[calc(100vh-8rem)] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">Favorites</h3>
+            <button
+              onClick={() => setShowFavorites(false)}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-2">
+            {favorites.length === 0 ? (
+              <p className="text-white/60 text-sm">No favorite stations yet</p>
+            ) : (
+              favorites.map((station) => (
+                <div
+                  key={station.name}
+                  className="flex items-center justify-between p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    {station.favicon ? (
+                      <Image 
+                        src={station.favicon} 
+                        alt={station.name}
+                        width={24}
+                        height={24}
+                        className="rounded"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 bg-white/10 rounded" />
+                    )}
+                    <span className="text-white text-sm truncate">{station.name}</span>
+                  </div>
+                  <button
+                    onClick={() => handleStationClick(station)}
+                    className="p-1 rounded-full hover:bg-white/20 transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    </svg>
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

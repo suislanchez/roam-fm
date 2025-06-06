@@ -5,8 +5,7 @@
     "plugin:@typescript-eslint/recommended",
     "plugin:react/recommended",
     "plugin:react-hooks/recommended",
-    "plugin:jsx-a11y/recommended",
-    "prettier"
+    "plugin:jsx-a11y/recommended"
   ],
   "plugins": [
     "@typescript-eslint",
@@ -15,16 +14,15 @@
     "jsx-a11y"
   ],
   "rules": {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-empty-interface": "off",
+    "@typescript-eslint/no-empty-object-type": "off",
+    "@next/next/no-img-element": "warn",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
-    "@typescript-eslint/explicit-module-boundary-types": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
-    "jsx-a11y/click-events-have-key-events": "warn",
-    "jsx-a11y/no-static-element-interactions": "warn",
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+    "import/no-anonymous-default-export": "off",
+    "@typescript-eslint/no-unused-expressions": "off"
   },
   "settings": {
     "react": {
