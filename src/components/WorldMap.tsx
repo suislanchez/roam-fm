@@ -32,6 +32,16 @@ interface RingData {
   altitude: number;
 }
 
+interface GlobePoint {
+  name: string;
+  latitude: number;
+  longitude: number;
+  url_resolved?: string;
+  favicon?: string;
+  country?: string;
+  mood?: string;
+}
+
 // Replace countries with moods
 const moods = [
   { value: 'relaxed', label: 'Relaxed', icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
@@ -77,7 +87,7 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
     stationsCount: 0,
     validStationsCount: 0,
     lastUpdate: new Date().toISOString(),
-    rawStations: [] as any[]
+    rawStations: [] as Station[]
   });
   const globeRef: MutableRefObject<GlobeMethods | undefined> = useRef<GlobeMethods | undefined>(undefined);
   const [dimensions, setDimensions] = useState({
@@ -540,13 +550,13 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
             pointsData={filteredStations}
             pointLat="latitude"
             pointLng="longitude"
-            pointColor={(point: any) => {
+            pointColor={(point: object) => {
               const station = point as Station;
               if (station === focusedStation) return '#FF6B6B';
               if (station === selectedStation) return '#4ECDC4';
               return '#ffffff';
             }}
-            pointRadius={(point: any) => {
+            pointRadius={(point: object) => {
               const station = point as Station;
               if (station === focusedStation) return dimensions.width < 768 ? 0.6 : 0.8;
               if (station === selectedStation) return dimensions.width < 768 ? 0.4 : 0.6;
@@ -558,17 +568,17 @@ export default function WorldMap({ tag, onTagChange }: WorldMapProps) {
             ringPropagationSpeed="propagationSpeed"
             ringRepeatPeriod="repeatPeriod"
             ringAltitude="altitude"
-            onPointClick={(point: object) => {
+            onPointClick={(point: object, event: MouseEvent, coords: { lat: number; lng: number; altitude: number; }) => {
               handleStationClick(point as Station);
             }}
-            onPointHover={(point: object | null) => {
+            onPointHover={(point: object | null, prevPoint: object | null) => {
               setHoveredStation(point as Station | null);
             }}
             enablePointerInteraction={true}
             animateIn={true}
             pointAltitude={0.1}
             pointsMerge={false}
-            pointLabel={(point: any) => (point as Station).name}
+            pointLabel={(point: object) => (point as Station).name}
             pointsTransitionDuration={300}
           />
         </div>
