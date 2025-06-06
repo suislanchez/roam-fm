@@ -1,0 +1,60 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect } from 'react';
+  import { createRoot } from 'react-dom';
+  import { scaleOrdinal } from 'https://esm.sh/d3-scale';
+
+  const colorScale = scaleOrdinal(['orangered', 'mediumblue', 'darkgreen', 'yellow']);
+
+  const labelsTopOrientation = new Set(['Apollo 12', 'Luna 2', 'Luna 20', 'Luna 21', 'Luna 24', 'LCROSS Probe']); // avoid label collisions
+
+  const Moon = () => {
+    const [landingSites, setLandingSites] = useState([]);
+
+    useEffect(() => {
+      fetch('./moon_landings.json')
+        .then(r =>r.json())
+        .then(setLandingSites);
+    }, []);
+
+    return <Globe
+      globeImageUrl="./lunar_surface.jpg"
+      bumpImageUrl="./lunar_bumpmap.jpg"
+      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+      showGraticules={true}
+      labelsData={landingSites}
+      labelText="label"
+      labelSize={1.7}
+      labelDotRadius={0.4}
+      labelDotOrientation={d => labelsTopOrientation.has(d.label) ? 'top' : 'bottom'}
+      labelColor={d => colorScale(d.agency)}
+      labelLabel={d => <div>
+        <div><b>{d.label}</b></div>
+        <div>{d.agency} - {d.program} Program</div>
+        <div>Landing on <i>{new Date(d.date).toLocaleDateString()}</i></div>
+      </div>}
+      onLabelClick={d => window.open(d.url, '_blank')}
+    />;
+  };
+
+  createRoot(document.getElementById('globeViz')).render(
+    <Moon />
+  );
+</script>
+</body>

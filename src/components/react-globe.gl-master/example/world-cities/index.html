@@ -1,0 +1,49 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect } from 'react';
+  import { createRoot } from 'react-dom';
+
+  const World = () => {
+    const [places, setPlaces] = useState([]);
+
+    useEffect(() => {
+      // load data
+      fetch('../datasets/ne_110m_populated_places_simple.geojson').then(res => res.json())
+        .then(({ features }) => setPlaces(features));
+    }, []);
+
+    return <Globe
+      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
+      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+
+      labelsData={places}
+      labelLat={d => d.properties.latitude}
+      labelLng={d => d.properties.longitude}
+      labelText={d => d.properties.name}
+      labelSize={d => Math.sqrt(d.properties.pop_max) * 4e-4}
+      labelDotRadius={d => Math.sqrt(d.properties.pop_max) * 4e-4}
+      labelColor={() => 'rgba(255, 165, 0, 0.75)'}
+      labelResolution={2}
+    />;
+  };
+
+  createRoot(document.getElementById('globeViz'))
+    .render(<World />);
+</script>
+</body>

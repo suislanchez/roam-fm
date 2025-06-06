@@ -1,0 +1,58 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect } from 'react';
+  import { createRoot } from 'react-dom';
+
+  const World = () => {
+    const [cablePaths, setCablePaths] = useState([]);
+
+    useEffect(() => {
+      // from https://www.submarinecablemap.com
+      fetch('//http-proxy.vastur.com?url=https://www.submarinecablemap.com/api/v3/cable/cable-geo.json')
+        .then(r => r.json())
+        .then(cablesGeo => {
+          let cablePaths = [];
+          cablesGeo.features.forEach(({ geometry, properties }) => {
+            geometry.coordinates.forEach(coords => cablePaths.push({ coords, properties }));
+          });
+
+          setCablePaths(cablePaths);
+        });
+    }, []);
+
+    return <Globe
+      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-dark.jpg"
+      bumpImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png"
+      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+      pathsData={cablePaths}
+      pathPoints="coords"
+      pathPointLat={p => p[1]}
+      pathPointLng={p => p[0]}
+      pathColor={path => path.properties.color}
+      pathLabel={path => path.properties.name}
+      pathDashLength={0.1}
+      pathDashGap={0.008}
+      pathDashAnimateTime={12000}
+    />;
+  };
+
+  createRoot(document.getElementById('globeViz'))
+    .render(<World />);
+</script>
+</body>

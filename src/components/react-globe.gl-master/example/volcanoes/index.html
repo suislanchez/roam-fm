@@ -1,0 +1,75 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect } from 'react';
+  import { createRoot } from 'react-dom';
+  import { scaleOrdinal } from 'https://esm.sh/d3-scale';
+  import { schemeCategory10 } from 'https://esm.sh/d3-scale-chromatic';
+  import { transparentize } from 'https://esm.sh/polished';
+
+  const World = () => {
+    const [volcanoes, setVolcanoes] = useState([]);
+
+    useEffect(() => {
+      // load data
+      fetch('../datasets/world_volcanoes.json').then(res => res.json())
+        .then(setVolcanoes);
+    }, []);
+
+    const catColor = scaleOrdinal(schemeCategory10.map(col => transparentize(0.2, col)));
+
+    const getAlt = d => d.elevation * 5e-5;
+
+    const getTooltip = d => <div>
+      <div style="text-align: center">
+        <div><b>{d.name}</b>, {d.country}</div>
+        <div>({d.type})</div>
+        <div>Elevation: <em>{d.elevation}</em>m</div>
+      </div>
+    </div>;
+
+    return <Globe
+      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg"
+      backgroundImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/night-sky.png"
+
+      pointsData={volcanoes}
+      pointLat="lat"
+      pointLng="lon"
+      pointAltitude={getAlt}
+      pointRadius={0.12}
+      pointColor={d => catColor(d.type)}
+      pointLabel={getTooltip}
+
+      labelsData={volcanoes}
+      labelLat="lat"
+      labelLng="lon"
+      labelAltitude={d => getAlt(d) + 1e-6}
+      labelDotRadius={0.12}
+      labelDotOrientation={() => 'bottom'}
+      labelColor={d => catColor(d.type)}
+      labelText="name"
+      labelSize={0.15}
+      labelResolution={1}
+      labelLabel={getTooltip}
+    />;
+  };
+
+  createRoot(document.getElementById('globeViz'))
+    .render(<World />);
+</script>
+</body>

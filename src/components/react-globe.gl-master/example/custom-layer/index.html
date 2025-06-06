@@ -1,0 +1,68 @@
+<head>
+  <style> body { margin: 0; } </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect, useRef } from 'react';
+  import { createRoot } from 'react-dom';
+  import * as THREE from 'https://esm.sh/three';
+
+  // Gen random data
+  const N = 300;
+  const randomData = [...Array(N).keys()].map(() => ({
+    lat: (Math.random() - 0.5) * 180,
+    lng: (Math.random() - 0.5) * 360,
+    alt: Math.random() * 0.8 + 0.1,
+    radius: Math.random() * 5,
+    color: ['red', 'white', 'blue', 'green'][Math.round(Math.random() * 3)]
+  }));
+
+  const World = () => {
+    const globeEl = useRef();
+    const [data, setData] = useState(randomData);
+
+    useEffect(() => {
+      (function moveSpheres() {
+        data.forEach(d => d.lat += 0.2);
+        setData(data.slice());
+        requestAnimationFrame(moveSpheres);
+      })();
+    }, []);
+
+    useEffect(() => {
+      globeEl.current.pointOfView({ altitude: 3.5 });
+    }, []);
+
+    return <Globe
+      ref={globeEl}
+      globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg"
+      bumpImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png"
+
+      customLayerData={data}
+      customThreeObject={d => new THREE.Mesh(
+        new THREE.SphereGeometry(d.radius),
+        new THREE.MeshLambertMaterial({ color: d.color })
+      )}
+      customThreeObjectUpdate={(obj, d) => {
+        Object.assign(obj.position, globeEl.current.getCoords(d.lat, d.lng, d.alt));
+      }}
+    />;
+  };
+
+  createRoot(document.getElementById('globeViz'))
+    .render(<World />);
+</script>
+</body>

@@ -1,0 +1,120 @@
+<head>
+  <style>
+    body { margin: 0; }
+
+    #time-log {
+      position: absolute;
+      font-size: 12px;
+      font-family: sans-serif;
+      padding: 5px;
+      border-radius: 3px;
+      background-color: rgba(200, 200, 200, 0.1);
+      color: lavender;
+      bottom: 10px;
+      right: 10px;
+    }
+  </style>
+
+  <script type="importmap">{ "imports": {
+    "react": "https://esm.sh/react",
+    "react-dom": "https://esm.sh/react-dom/client"
+  }}</script>
+
+<!--  <script type="module">import * as React from 'react'; window.React = React;</script>-->
+<!--  <script src="../../dist/react-globe.gl.js" defer></script>-->
+</head>
+
+<body>
+<div id="globeViz"></div>
+
+<script src="//unpkg.com/@babel/standalone"></script>
+<script type="text/jsx" data-type="module">
+  import Globe from 'https://esm.sh/react-globe.gl?external=react';
+  import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+  import { createRoot } from 'react-dom';
+  import * as satellite from 'https://esm.sh/satellite.js';
+
+  const EARTH_RADIUS_KM = 6371; // km
+  const TIME_STEP = 3 * 1000; // per frame
+
+  const World = () => {
+    const globeEl = useRef();
+    const [satData, setSatData] = useState();
+    const [globeRadius, setGlobeRadius] = useState();
+    const [time, setTime] = useState(new Date());
+
+    useEffect(() => {
+      // time ticker
+      (function frameTicker() {
+        requestAnimationFrame(frameTicker);
+        setTime(time => new Date(+time + TIME_STEP));
+      })();
+    }, []);
+
+    useEffect(() => {
+      // load satellite data
+      fetch('//cdn.jsdelivr.net/npm/globe.gl/example/datasets/space-track-leo.txt').then(r => r.text()).then(rawData => {
+        const tleData = rawData.replace(/\r/g, '')
+          .split(/\n(?=[^12])/)
+          .filter(d => d)
+          .map(tle => tle.split('\n'));
+        const satData = tleData.map(([name, ...tle]) => ({
+          satrec: satellite.twoline2satrec(...tle),
+          name: name.trim().replace(/^0 /, '')
+        }))
+        // exclude those that can't be propagated
+        .filter(d => !!satellite.propagate(d.satrec, new Date())?.position);
+
+        setSatData(satData);
+      });
+    }, []);
+
+    const particlesData = useMemo(() => {
+      if (!satData) return [];
+
+      // Update satellite positions
+      const gmst = satellite.gstime(time);
+      return [
+        satData.map(d => {
+          const eci = satellite.propagate(d.satrec, time);
+          if (eci?.position) {
+            const gdPos = satellite.eciToGeodetic(eci.position, gmst);
+            const lat = satellite.radiansToDegrees(gdPos.latitude);
+            const lng = satellite.radiansToDegrees(gdPos.longitude);
+            const alt = gdPos.height / EARTH_RADIUS_KM;
+            return { ...d, lat, lng, alt };
+          } else {
+            // explicitly handle invalid position
+            d.lat = NaN;
+            d.lng = NaN;
+            d.alt = NaN;
+          }
+          return d;
+        }).filter(d => !isNaN(d.lat) && !isNaN(d.lng) && !isNaN(d.alt))
+      ];
+    }, [satData, time]);
+
+    useEffect(() => {
+      setGlobeRadius(globeEl.current.getGlobeRadius());
+      globeEl.current.pointOfView({ altitude: 3.5 });
+    }, []);
+
+    return <div>
+      <Globe
+        ref={globeEl}
+        globeImageUrl="//cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg"
+        particlesData={particlesData}
+        particleLabel="name"
+        particleLat="lat"
+        particleLng="lng"
+        particleAltitude="alt"
+        particlesColor={useCallback(() => 'palegreen', [])}
+      />
+      <div id="time-log">{time.toString()}</div>
+    </div>;
+  };
+
+  createRoot(document.getElementById('globeViz'))
+    .render(<World />);
+</script>
+</body>
