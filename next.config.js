@@ -12,10 +12,8 @@ const nextConfig = {
         hostname: '**',
       }
     ]
-  },
-  experimental: {
-    appDir: true
   }
+  
 };
 
 module.exports = nextConfig; 
